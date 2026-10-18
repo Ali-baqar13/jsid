@@ -50,7 +50,7 @@ public class User implements UserDetails {
             return List.of();
 
         }
-        return List.of(new SimpleGrantedAuthority(role.name().toUpperCase(Locale.ROOT)));
+        return List.of(new SimpleGrantedAuthority("ROLE_"+role.name().toUpperCase(Locale.ROOT)));
     }
 
     @Override

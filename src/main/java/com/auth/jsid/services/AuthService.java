@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import com.auth.jsid.model.AuthenticationResponse;
 import com.auth.jsid.model.CsrfTokenResponse;
+import com.auth.jsid.model.ForgetPasswordData;
+import com.auth.jsid.model.OTP;
 import com.auth.jsid.model.User;
 import com.auth.jsid.userRepository.UserRepository;
 
@@ -69,9 +71,10 @@ public CsrfTokenResponse generateCsrf(
 }
 
 
-    public ResponseEntity<String> ResgisterUser(User user) {
+    public String ResgisterUser(User user) {
 
         if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
 
         }
 
@@ -79,10 +82,11 @@ public CsrfTokenResponse generateCsrf(
                 .email(user.getEmail())
                 .password(passwordEncoder.encode(user.getPassword()))
                 .username(user.getUsername())
+                .role(user.getRole())
                 .build();
         userRepository.save(userDetails);
 
-        return new ResponseEntity<>("successfully Register the User", HttpStatus.CREATED);
+        return "successfully Register the User";
 
     }
 
@@ -102,6 +106,35 @@ public CsrfTokenResponse generateCsrf(
         contexts.saveContext(context, request, response);
         return auth;
 
+    }
+
+    public String sendOTP(){
+
+        return "OTP Send Successfully";
+    }
+
+
+    public String updatePassword(ForgetPasswordData data) {
+
+        User user = userRepository.findByEmail(data.getEmail()).get();
+        user.setPassword(data.getPassword());
+        userRepository.save(user);
+        return "password updated successfully";
+    }
+
+
+    public String verifyOtp(OTP otpData) {
+
+        String hardCodeOtp = "9797";
+        if(otpData.getOtp() == null || otpData.getOtp().isBlank()){
+            throw new IllegalArgumentException("OTP IS required");
+        }
+
+        if(!hardCodeOtp.equals(otpData.getOtp())){
+          throw new IllegalArgumentException("wrong Otp");
+        }
+
+       return "verification succesfull";
     }
 
 }
