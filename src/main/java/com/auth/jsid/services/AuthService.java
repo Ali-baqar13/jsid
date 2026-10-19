@@ -19,7 +19,9 @@ import com.auth.jsid.model.AuthenticationResponse;
 import com.auth.jsid.model.CsrfTokenResponse;
 import com.auth.jsid.model.ForgetPasswordData;
 import com.auth.jsid.model.OTP;
+import com.auth.jsid.model.OtpModel;
 import com.auth.jsid.model.User;
+import com.auth.jsid.model.otpModel;
 import com.auth.jsid.userRepository.UserRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -99,6 +101,8 @@ public CsrfTokenResponse generateCsrf(
                 auth,
                 request,
                 response);
+        OtpModel Otp = OtpModel().bui        
+        
         sessions.onAuthentication(auth, request, response);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(auth);
@@ -108,7 +112,7 @@ public CsrfTokenResponse generateCsrf(
 
     }
 
-    public String sendOTP(){
+    public String   sendOTP(){
 
         return "OTP Send Successfully";
     }

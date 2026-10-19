@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.auth.jsid.gmailService.GmailService;
 import com.auth.jsid.model.AuthenticationResponse;
 import com.auth.jsid.model.CsrfTokenResponse;
 import com.auth.jsid.model.ForgetPasswordData;
@@ -28,6 +29,9 @@ public class UserController {
 
     @Autowired 
     AuthService authService;
+
+    @Autowired
+    GmailService gmailService;
 
     @GetMapping("/getCsrf")
     public ResponseEntity<CsrfTokenResponse> csrfToken(HttpServletRequest request, HttpServletResponse response) {
@@ -51,14 +55,24 @@ public class UserController {
     @PostMapping 
     public ResponseEntity<String> verifyOtp(@RequestBody OTP otpData) {
 
-         return new ResponseEntity<>(authService.verifyOtp(),HttpStatus.CREATED);
+         return new ResponseEntity<>(authService.verifyOtp(otpData),HttpStatus.CREATED);
 
     }
 
     @PutMapping("/update-password")
-    public ResponseEntity<String> updatePassword(@RequestBody ForgetPasswordData data){
+    public ResponseEntity<String> updatePassword(@RequestBody ForgetPasswordData data) {
         return new ResponseEntity<>(authService.updatePassword(data), HttpStatus.OK);
 
     }
+    @GetMapping("/sendOtp")
+    public ResponseEntity<String> sendOtp(@RequestBody String email) {
+        try {
+            gmailService.sendOtpAdmin(email);
+            return new ResponseEntity<>("OTP senr successfully", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
+        
+    } 
     
 }
