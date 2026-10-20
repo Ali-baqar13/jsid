@@ -1,8 +1,7 @@
 package com.auth.jsid.services;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Random;
+import java.security.SecureRandom;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,6 +27,7 @@ import com.auth.jsid.userRepository.UserRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @Service
 public class AuthService {
@@ -36,8 +36,6 @@ public class AuthService {
     CsrfTokenRepository csrfTokenRepo;
     @Autowired
     AuthenticationManager authenticationManager;
-    @Autowired 
-    SessionAuthenticationStrategy sessionAuthenticationStrategy;
     @Autowired
     private SecurityContextRepository contexts;
     @Autowired
@@ -49,6 +47,9 @@ public class AuthService {
 
     @Autowired
     OtpRepository otpRepository;
+    private static final String PENDING_USERNAME = "PENDING_USERNAME";
+    private static final long OTP_VALIDITY_MINUTES = 5;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     
     
@@ -91,14 +92,12 @@ public String ResgisterUser(User user) {
 
     
 public OtpModel generateOtp(User user) {
-    String otp = String.format("%5d", new Random().nextInt(100000));
+    String otp = String.format("%06d", secureRandom.nextInt(1_000_000));
 
-    LocalDateTime otpTimestamp = LocalDateTime.now();
-    OtpModel otpModel = OtpModel.builder()
-            .user(user)
-            .otp(otp)
-            .expiryDate(otpTimestamp)
-            .build();
+    OtpModel otpModel = otpRepository.findByUser(user)
+            .orElseGet(() -> OtpModel.builder().user(user).build());
+    otpModel.setOtp(otp);
+    otpModel.setExpiryDate(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
     otpRepository.save(otpModel);
 
     return otpModel;
@@ -107,30 +106,69 @@ public OtpModel generateOtp(User user) {
     public Authentication Signin(AuthenticationResponse data, HttpServletRequest request,
             HttpServletResponse response) {
 
-        Authentication auth = authenticationManager
+        Authentication pendingAuthentication = authenticationManager
                 .authenticate(new UsernamePasswordAuthenticationToken(data.getUsername(), data.getPassword()));
 
-        // sessionAuthenticationStrategy.onAuthentication(
-        //         auth,
-        //         request,
-        //         response);
+       
         User user = userRepository.findByUsername(data.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        generateOtp(user);    
-        
-        sessions.onAuthentication(auth, request, response);
+        generateOtp(user);
+
+        // Password verification is only the first step. Do not put this authentication
+        // in the SecurityContext until the OTP has also been verified.
+        request.getSession(true).setAttribute(PENDING_USERNAME, user.getUsername());
+        return pendingAuthentication;
+    }
+
+    public String verifyOtp(OTP otp, HttpServletRequest request, HttpServletResponse response) {
+
+        if (otp == null || otp.getEmail() == null || otp.getEmail().isBlank()
+                || otp.getOtp() == null || otp.getOtp().isBlank()) {
+            throw new IllegalArgumentException("Email and OTP are required");
+        }
+
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            throw new IllegalStateException("No pending authentication found");
+        }
+
+        String pendingUsername = (String) session.getAttribute(PENDING_USERNAME);
+        if (pendingUsername == null) {
+            throw new IllegalStateException("No pending authentication found");
+        }
+
+        User user = userRepository.findByEmail(otp.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!pendingUsername.equals(user.getUsername())) {
+            throw new IllegalArgumentException("OTP does not belong to the pending login");
+        }
+
+        OtpModel otpModel = otpRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("OTP not found"));
+        if (otpModel.getExpiryDate() == null || LocalDateTime.now().isAfter(otpModel.getExpiryDate())) {
+            otpRepository.delete(otpModel);
+            session.removeAttribute(PENDING_USERNAME);
+            throw new IllegalArgumentException("OTP has expired");
+        }
+        if (!otp.getOtp().equals(otpModel.getOtp())) {
+            throw new IllegalArgumentException("Wrong OTP");
+        }
+
+        Authentication completedAuthentication = new UsernamePasswordAuthenticationToken(
+                user, null, user.getAuthorities());
+        sessions.onAuthentication(completedAuthentication, request, response);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(auth);
+        context.setAuthentication(completedAuthentication);
         SecurityContextHolder.setContext(context);
         contexts.saveContext(context, request, response);
-        return auth;
+        session.removeAttribute(PENDING_USERNAME);
+        otpRepository.delete(otpModel);
 
+        return "Verification successful";
     }
 
-    public String   sendOTP(){
-
-        return "OTP Send Successfully";
-    }
+    
 
 
     public String updatePassword(ForgetPasswordData data) {
@@ -142,21 +180,6 @@ public OtpModel generateOtp(User user) {
     }
 
 
-    public String verifyOtp(OTP otp) {
-
-        // String hardCodeOtp = "9797";
-        if (otp == null || otp.getEmail().isBlank()) {
-            throw new IllegalArgumentException("OTP IS required");
-        }
-        
-        Optional<User> user = userRepository.findByEmail(otp.getEmail()).orElseThrow(()-> IllegalArgumentException("User not found"));
-      
-         OtpModel otpModel = user.getOtpModel();
-        if(!otp.equals(otpModel.getOtp())){
-          throw new IllegalArgumentException("wrong Otp");
-        }
-
-       return "verification succesfull";
-    }
+    
 
 }

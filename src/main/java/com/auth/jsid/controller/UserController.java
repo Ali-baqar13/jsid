@@ -53,9 +53,10 @@ public class UserController {
 
     }
     @PostMapping 
-    public ResponseEntity<String> verifyOtp(@RequestBody OTP otpData) {
+    public ResponseEntity<String> verifyOtp(@RequestBody OTP otpData, HttpServletRequest request,
+            HttpServletResponse response) {
 
-         return new ResponseEntity<>(authService.verifyOtp(otpData),HttpStatus.CREATED);
+         return new ResponseEntity<>(authService.verifyOtp(otpData, request, response),HttpStatus.CREATED);
 
     }
 
