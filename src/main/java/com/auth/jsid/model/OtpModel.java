@@ -11,10 +11,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@Builder 
+@Builder
+@NoArgsConstructor 
 public class OtpModel {
 
 
@@ -26,7 +28,7 @@ public class OtpModel {
     private String otp;
     private LocalDateTime expiryDate;
     @OneToOne
-    @JoinColumn(name="id")
+    @JoinColumn(name="user_id")
     private User user;
 
     public OtpModel(Integer id, String otp, LocalDateTime expiryDate, User user) {
