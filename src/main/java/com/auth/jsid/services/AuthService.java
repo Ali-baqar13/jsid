@@ -173,8 +173,14 @@ public OtpModel generateOtp(User user) {
 
     public String updatePassword(ForgetPasswordData data) {
 
-        User user = userRepository.findByEmail(data.getEmail()).get();
-        user.setPassword(data.getPassword());
+        if (data == null || data.getEmail() == null || data.getEmail().isBlank()
+                || data.getPassword() == null || data.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Email and password are required");
+        }
+
+        User user = userRepository.findByEmail(data.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPassword(passwordEncoder.encode(data.getPassword()));
         userRepository.save(user);
         return "password updated successfully";
     }
