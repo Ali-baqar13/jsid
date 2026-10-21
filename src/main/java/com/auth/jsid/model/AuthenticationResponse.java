@@ -7,12 +7,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor 
 public class AuthenticationResponse {
 
-    private String username;
+    private String email;
     private String password;
 
-    public AuthenticationResponse(String username, String password) {
+    public AuthenticationResponse(String email, String password) {
 
-        this.username = username;
+        this.email = email;
         this.password = password;
         
     }

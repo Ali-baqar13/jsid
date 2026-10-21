@@ -47,7 +47,7 @@ public class AuthService {
 
     @Autowired
     OtpRepository otpRepository;
-    private static final String PENDING_USERNAME = "PENDING_USERNAME";
+    private static final String PENDING_EMAIL = "PENDING_EMAIL";
     private static final long OTP_VALIDITY_MINUTES = 5;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -92,32 +92,41 @@ public String ResgisterUser(User user) {
 
     
 public OtpModel generateOtp(User user) {
-    String otp = String.format("%06d", secureRandom.nextInt(1_000_000));
+    String otp = "12345"; // Testing only
 
     OtpModel otpModel = otpRepository.findByUser(user)
-            .orElseGet(() -> OtpModel.builder().user(user).build());
-    otpModel.setOtp(otp);
-    otpModel.setExpiryDate(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
-    otpRepository.save(otpModel);
+            .orElseGet(() -> OtpModel.builder()
+                    .user(user)
+                    .build());
 
-    return otpModel;
+    otpModel.setUser(user);
+    otpModel.setOtp(otp);
+    otpModel.setExpiryDate(
+            LocalDateTime.now().plusMinutes(5)
+    );
+
+    user.setOtpModel(otpModel);
+
+    return otpRepository.save(otpModel);
 }
     
-    public Authentication Signin(AuthenticationResponse data, HttpServletRequest request,
+    public String Signin(AuthenticationResponse data, HttpServletRequest request,
             HttpServletResponse response) {
 
         Authentication pendingAuthentication = authenticationManager
-                .authenticate(new UsernamePasswordAuthenticationToken(data.getUsername(), data.getPassword()));
+                .authenticate(new UsernamePasswordAuthenticationToken(data.getEmail(), data.getPassword()));
 
        
-        User user = userRepository.findByUsername(data.getUsername())
+        User user = userRepository.findByEmail(data.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        System.out.println(user);
         generateOtp(user);
 
         // Password verification is only the first step. Do not put this authentication
         // in the SecurityContext until the OTP has also been verified.
-        request.getSession(true).setAttribute(PENDING_USERNAME, user.getUsername());
-        return pendingAuthentication;
+        request.getSession(true).setAttribute(PENDING_EMAIL, user.getEmail());
+        System.out.println(user.getEmail()+"checking for email");
+        return "otp sent";
     }
 
     public String verifyOtp(OTP otp, HttpServletRequest request, HttpServletResponse response) {
@@ -132,7 +141,7 @@ public OtpModel generateOtp(User user) {
             throw new IllegalStateException("No pending authentication found");
         }
 
-        String pendingUsername = (String) session.getAttribute(PENDING_USERNAME);
+        String pendingUsername = (String) session.getAttribute(PENDING_EMAIL);
         if (pendingUsername == null) {
             throw new IllegalStateException("No pending authentication found");
         }
@@ -140,7 +149,7 @@ public OtpModel generateOtp(User user) {
         User user = userRepository.findByEmail(otp.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (!pendingUsername.equals(user.getUsername())) {
+        if (!pendingUsername.equals(user.getEmail())) {
             throw new IllegalArgumentException("OTP does not belong to the pending login");
         }
 
@@ -148,7 +157,8 @@ public OtpModel generateOtp(User user) {
                 .orElseThrow(() -> new IllegalArgumentException("OTP not found"));
         if (otpModel.getExpiryDate() == null || LocalDateTime.now().isAfter(otpModel.getExpiryDate())) {
             otpRepository.delete(otpModel);
-            session.removeAttribute(PENDING_USERNAME);
+            System.out.println(otpModel.getExpiryDate()+"expiry date"+ LocalDateTime.now().isAfter(otpModel.getExpiryDate()));
+            session.removeAttribute(PENDING_EMAIL);
             throw new IllegalArgumentException("OTP has expired");
         }
         if (!otp.getOtp().equals(otpModel.getOtp())) {
@@ -162,7 +172,7 @@ public OtpModel generateOtp(User user) {
         context.setAuthentication(completedAuthentication);
         SecurityContextHolder.setContext(context);
         contexts.saveContext(context, request, response);
-        session.removeAttribute(PENDING_USERNAME);
+        session.removeAttribute(PENDING_EMAIL);
         otpRepository.delete(otpModel);
 
         return "Verification successful";

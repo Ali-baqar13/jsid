@@ -35,7 +35,7 @@ public class SecurityFilterChain {
 
     @Bean
     public UserDetailsService userDetailsServices(UserRepository user) {
-        return username -> user.findByUsername(username)
+        return username -> user.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
@@ -81,7 +81,7 @@ public class SecurityFilterChain {
                 .csrf(config -> config.csrfTokenRepository(csrf)
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .authorizeHttpRequests(
-                        auth -> auth.requestMatchers("/auth","/auth/register", "/auth/login", "/auth/getCsrf", "/error").permitAll()
+                        auth -> auth.requestMatchers("/auth","/auth/verify-otp","/auth/register", "/auth/login", "/auth/getCsrf", "/error").permitAll()
                                 .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> response.sendError(401))

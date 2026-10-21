@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.auth.jsid.gmailService.GmailService;
+
 import com.auth.jsid.model.AuthenticationResponse;
 import com.auth.jsid.model.CsrfTokenResponse;
 import com.auth.jsid.model.ForgetPasswordData;
@@ -30,8 +30,8 @@ public class UserController {
     @Autowired 
     AuthService authService;
 
-    @Autowired
-    GmailService gmailService;
+    // @Autowired
+    // GmailService gmailService;
 
     @GetMapping("/getCsrf")
     public ResponseEntity<CsrfTokenResponse> csrfToken(HttpServletRequest request, HttpServletResponse response) {
@@ -47,33 +47,40 @@ public class UserController {
 
     }
     @PostMapping("/login")
-    public ResponseEntity<Authentication> login(@RequestBody AuthenticationResponse data, HttpServletRequest req, HttpServletResponse res){
+    public ResponseEntity<String> login(@RequestBody AuthenticationResponse data, HttpServletRequest req, HttpServletResponse res){
 
         return new ResponseEntity<>(authService.Signin(data,req, res), HttpStatus.OK);
 
     }
-    @PostMapping 
-    public ResponseEntity<String> verifyOtp(@RequestBody OTP otpData, HttpServletRequest request,
-            HttpServletResponse response) {
+    // @PostMapping 
+    // public ResponseEntity<String> verifyOtp(@RequestBody OTP otpData, HttpServletRequest request,
+    //         HttpServletResponse response) {
 
-         return new ResponseEntity<>(authService.verifyOtp(otpData, request, response),HttpStatus.CREATED);
+    //      return new ResponseEntity<>(authService.verifyOtp(otpData, request, response),HttpStatus.CREATED);
 
-    }
+    // }
 
     @PutMapping("/update-password")
     public ResponseEntity<String> updatePassword(@RequestBody ForgetPasswordData data) {
         return new ResponseEntity<>(authService.updatePassword(data), HttpStatus.OK);
 
     }
-    @GetMapping("/sendOtp")
-    public ResponseEntity<String> sendOtp(@RequestBody String email) {
-        try {
-            gmailService.sendOtpAdmin(email);
-            return new ResponseEntity<>("OTP senr successfully", HttpStatus.OK);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(e.getMessage());
-        }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<String> verifyOtp(@RequestBody OTP otp,HttpServletRequest req, HttpServletResponse res){
+
+        return new ResponseEntity<>(authService.verifyOtp(otp, req, res), HttpStatus.FOUND);
+
+    }
+    // @GetMapping("/sendOtp")
+    // public ResponseEntity<String> sendOtp(@RequestBody String email) {
+    //     try {
+    //         gmailService.sendOtpAdmin(email);
+    //         return new ResponseEntity<>("OTP senr successfully", HttpStatus.OK);
+    //     } catch (Exception e) {
+    //         return ResponseEntity.status(500).body(e.getMessage());
+    //     }
         
-    } 
+    // } 
     
 }
