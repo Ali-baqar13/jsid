@@ -105,8 +105,6 @@ public OtpModel generateOtp(User user) {
             LocalDateTime.now().plusMinutes(5)
     );
 
-    user.setOtpModel(otpModel);
-
     return otpRepository.save(otpModel);
 }
     

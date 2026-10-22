@@ -3,7 +3,7 @@ package com.auth.jsid.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -66,11 +66,21 @@ public class UserController {
 
     }
 
-    @PostMapping("/verify-otp")
+    @PostMapping("/verifyOtp")
     public ResponseEntity<String> verifyOtp(@RequestBody OTP otp,HttpServletRequest req, HttpServletResponse res){
 
-        return new ResponseEntity<>(authService.verifyOtp(otp, req, res), HttpStatus.FOUND);
+        return ResponseEntity.ok(authService.verifyOtp(otp, req, res));
 
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleInvalidOtp(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest().body(exception.getMessage());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<String> handleMissingLoginSession(IllegalStateException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(exception.getMessage());
     }
     // @GetMapping("/sendOtp")
     // public ResponseEntity<String> sendOtp(@RequestBody String email) {
